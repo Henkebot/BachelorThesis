@@ -15,46 +15,28 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="DX12Wrap.h">
+    <ClInclude Include="GazeEngine.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="GPUPch.h">
+    <ClInclude Include="tobii\tobii.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="CommandQueue.h">
+    <ClInclude Include="tobii\tobii_engine.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="CommandRecorder.h">
+    <ClInclude Include="tobii\tobii_streams.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Utillity\stb_image.h">
+    <ClInclude Include="tobii\tobii_wearable.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Utillity\stb_image_write.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Utillity\ScopedTimer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Utillity\d3dx12.h">
+    <ClInclude Include="GazePCH.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="DX12Wrap.cpp">
+    <ClCompile Include="GazeEngine.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="GPUPch.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="CommandQueue.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="CommandRecorder.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <FxCompile Include="Shaders\ComputeShader.hlsl" />
   </ItemGroup>
 </Project>
