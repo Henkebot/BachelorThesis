@@ -62,38 +62,107 @@ float4 YUVtoRGB(float4 yuva)
 	return float4(mul(mYUV709i, yuva.rgb), yuva.a);
 }
 
+uint LinearDistance(int2 Position)
+{
+	int d = distance(Position, gazePos);
+
+	float d3 = 2000.0f;
+
+	float quality = (1.0f - ((float(d / (d3)))));
+	return quality * 85.0f;
+}
+
+uint LogDistance(int2 Position)
+{
+	int d = distance(Position, gazePos);
+
+	float quality;
+	quality = 1.0f - ((log(d) * 100.0f) / log(2400.0f));
+
+	return quality * 85.0f;
+}
+
+uint ExpDistance(int2 Position)
+{
+	int d = distance(Position, gazePos);
+
+	float d3 = 2400.0f;
+
+	float quality = (1.0f - ((float(d / (d3)))));
+	quality *= quality;
+	return quality * 85.0f;
+}
+
+uint CalculateQuality(uint2 Position)
+{
+	uint quality = 1;
+#ifdef LINEAR
+	quality = LinearDistance(Position);
+#endif
+
+	//#ifdef LOG
+	//	quality = LogDistance(Position);
+	//#endif
+
+#ifdef EXP
+	quality = ExpDistance(Position);
+#endif
+
+#ifdef LOG
+	int d = distance(Position, gazePos);
+
+	float d3 = 2400.0f;
+
+	float q = (1.0f - ((float(d / (d3)))));
+
+	if(q >= 0.9f && q <= 1.0f)
+		quality = 85;
+	else if(q >= 0.8f && q < 0.9f)
+	{
+		float num = (0.9f - q) / (0.9f - 0.8f);
+		quality   = lerp(85.0f, 20.0f, num);
+	}
+	else
+	{
+
+		quality = 20;
+	}
+#endif
+
+	return quality;
+}
+
 [numthreads(BLOCK_ROW_COUNT, BLOCK_ROW_COUNT, 1)] void main(uint3 DispatchThreadID
 															: SV_DispatchThreadID, uint3 GroupID
 															: SV_GroupID, uint GroupIndex
 															: SV_GroupIndex, uint3 GroupThreadID
 															: SV_GroupThreadID) {
 	int2 coord = GroupID.xy;
-
+	// Divide to get block location
 	coord <<= 3;
-	int d	= distance(coord, gazePos);
-	float d2 = (coord.x - gazePos.x) * (coord.x - gazePos.x) +
-			   (coord.y - gazePos.y) * (coord.y - gazePos.y);
-	float d3	  = 2400.0f;
-	float quality = (1.0f - ((float(d / (d3)))));
 
-	//Output[DispatchThreadID.xy] = float4(quality, quality, quality, 1.0f);
-	//return;
-	quality *= 85;
+	uint quality = CalculateQuality(coord);
+
+	float q = quality / 100.0f;
+
+	Output[DispatchThreadID.xy] = float4(q, 0, 0, 1.0f);
+	return;
 
 	quality = quality < 1 ? 1 : quality > 100 ? 100 : quality;
 	quality = quality < 50 ? 5000 / quality : 200 - quality * 2;
-
 	int k;
 
 	int yti			= (YQT[GroupIndex] * quality + 50) / 100;
 	yti				= (yti < 1 ? 1 : yti > 255 ? 255 : yti);
 	YQT[GroupIndex] = yti;
 
+	quality = 1;
 	int uvti		 = (UVQT[GroupIndex] * quality + 50) / 100;
 	uvti			 = (uvti < 1 ? 1 : uvti > 255 ? 255 : uvti);
 	UVQT[GroupIndex] = uvti;
 
 	coord += GroupThreadID.xy;
+
 	// Convert to uv
 	float2 uv_coordinates;
 	uv_coordinates.x = coord.x / 1920.0f;
@@ -153,5 +222,5 @@ float4 YUVtoRGB(float4 yuva)
 
 	Pixels[GroupIndex] = YUVtoRGB(Pixels[GroupIndex]);
 
-	Output[coord] = Pixels[GroupIndex];
+	Output[DispatchThreadID.xy] = Pixels[GroupIndex];
 }

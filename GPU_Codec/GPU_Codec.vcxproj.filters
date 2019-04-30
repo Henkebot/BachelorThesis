@@ -55,6 +55,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="Shaders\ComputeShader.hlsl" />
+    <FxCompile Include="Shaders\ComputeRAW.hlsl" />
+    <FxCompile Include="Shaders\ComputeGAZE.hlsl" />
   </ItemGroup>
 </Project>

@@ -10,6 +10,10 @@ namespace GazeVar
 	int ScreenWidth, ScreenHeight;
 
 	int GazeX, GazeY;
+
+	HANDLE threadHandle;
+	volatile LONG gThreadRunning;
+
 } // namespace GazeVar
 
 namespace GazeImpl
@@ -33,6 +37,21 @@ namespace GazeImpl
 		}
 	}
 
+	DWORD gazeThreadProc(LPVOID pData)
+	{
+		while(InterlockedCompareExchange(&GazeVar::gThreadRunning, 0, 0))
+		{
+			tobii_error_t error;
+
+			error = tobii_wait_for_callbacks(NULL, 1, &GazeVar::pDevice);
+			assert(error == TOBII_ERROR_NO_ERROR || error == TOBII_ERROR_TIMED_OUT);
+
+			error = tobii_device_process_callbacks(GazeVar::pDevice);
+			assert(error == TOBII_ERROR_NO_ERROR);
+		}
+		return 0;
+	}
+
 } // namespace GazeImpl
 
 namespace Gaze
@@ -41,7 +60,7 @@ namespace Gaze
 
 	void Init(int _ScreenWidth, int _ScreenHeight)
 	{
-		GazeVar::ScreenWidth = _ScreenWidth;
+		GazeVar::ScreenWidth  = _ScreenWidth;
 		GazeVar::ScreenHeight = _ScreenHeight;
 		tobii_error_t error;
 
@@ -55,19 +74,21 @@ namespace Gaze
 		error = tobii_device_create(pApi, url, &pDevice);
 		assert(error == TOBII_ERROR_NO_ERROR);
 
+		// Create the thread
+		gThreadRunning = 1L;
+		CreateThread(nullptr, 0, GazeImpl::gazeThreadProc, nullptr, 0, nullptr);
+
 		error = tobii_gaze_point_subscribe(pDevice, GazeImpl::gazePointCallback, 0);
 		assert(error == TOBII_ERROR_NO_ERROR);
 	}
 
-	void Update()
+	void CleanUp()
 	{
-		tobii_error_t error;
+		InterlockedExchange(&gThreadRunning, 0);
+		WaitForSingleObject(GazeVar::threadHandle, INFINITE);
 
-		error = tobii_wait_for_callbacks(NULL, 1, &pDevice);
-		assert(error == TOBII_ERROR_NO_ERROR || error == TOBII_ERROR_TIMED_OUT);
-
-		error = tobii_device_process_callbacks(pDevice);
-		assert(error == TOBII_ERROR_NO_ERROR);
+		tobii_device_destroy(GazeVar::pDevice);
+		tobii_api_destroy(GazeVar::pApi);
 	}
 
 	DirectX::XMINT2 GetGazePoint()

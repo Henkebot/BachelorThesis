@@ -7,7 +7,7 @@ namespace Gaze
 
 	void Init(int _ScreenWidth, int _ScreenHeight);
 
-	void Update();
+	void CleanUp();
 
 	DirectX::XMINT2 GetGazePoint();
 }

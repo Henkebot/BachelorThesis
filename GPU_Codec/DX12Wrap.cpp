@@ -71,8 +71,17 @@ namespace DX12Var
 		NUM_OF_ROOT_SLOTS
 
 	};
+	enum GAZE_PIPELINES : UINT
+	{
+		GAZE_LINEAR = 0,
+		GAZE_LOG,
+		GAZE_EXP,
+		NUM_OF_GAZE_FUNCTIONS
+	};
+	UINT gCurrentGazeFunction;
 	ComPtr<ID3D12RootSignature> gComputeRoot;
-	ComPtr<ID3D12PipelineState> gComputePipeline;
+	ComPtr<ID3D12PipelineState> gComputeGazePipeline[NUM_OF_GAZE_FUNCTIONS];
+	ComPtr<ID3D12PipelineState> gComputeRAWPipeline;
 
 	// DCT
 	ComPtr<ID3D12Resource> gDCTMatrix;
@@ -101,6 +110,7 @@ namespace DX11Var
 	ComPtr<ID2D1DeviceContext> gD2DDeviceContext;
 	ComPtr<IDWriteFactory> gDWriteFactory;
 } // namespace DX11Var
+
 namespace GazePoint
 {
 	int lastX, lastY;
@@ -123,6 +133,23 @@ namespace Screen
 	int width, height;
 	int width8, height8;
 } // namespace Screen
+
+namespace Debug
+{
+	const WCHAR* GetCurrentRadialFunctionWStr()
+	{
+		switch (DX12Var::gCurrentGazeFunction)
+		{
+		case DX12Var::GAZE_LINEAR:
+			return L"LIN";
+		case DX12Var::GAZE_LOG:
+			return L"LOG";
+		case DX12Var::GAZE_EXP:
+			return L"EXP";
+		}
+		return L"NUL";
+	}
+} // namespace Debug
 
 // Returns a image in 32 bit format
 BYTE* LoadPPM(const char* _pTexturePath, int* _pWidth, int* _pHeight)
@@ -352,13 +379,13 @@ namespace Impl
 
 		D3D12_CPU_DESCRIPTOR_HANDLE handle = gRTVHeap->GetCPUDescriptorHandleForHeapStart();
 
-		FLOAT dpiX, dpiY;
-		dpiX = dpiY								 = GetDpiForWindow(GetActiveWindow());
+		UINT dpi = GetDpiForWindow(GetActiveWindow());
+
 		D2D1_BITMAP_PROPERTIES1 bitmapProperties = D2D1::BitmapProperties1(
 			D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW,
 			D2D1::PixelFormat(DXGI_FORMAT_UNKNOWN, D2D1_ALPHA_MODE_PREMULTIPLIED),
-			dpiX,
-			dpiY);
+			static_cast<FLOAT>(dpi),
+			static_cast<FLOAT>(dpi));
 
 		for(UINT i = 0; i < NUM_BACKBUFFERS; i++)
 		{
@@ -794,19 +821,14 @@ namespace Impl
 		}
 	}
 
-	void CreatePipleineStates(void)
+	void CreateComputeShader(const wchar_t* _pPath,
+							 ID3D12PipelineState** _pPipelineState,
+							 D3D_SHADER_MACRO* pDefines = nullptr)
 	{
 		ComPtr<ID3DBlob> computeBlob;
 		ComPtr<ID3DBlob> errorPtr;
-		TIF(D3DCompileFromFile(L"../GPU_Codec/Shaders/ComputeShader.hlsl",
-							   nullptr,
-							   nullptr,
-							   "main",
-							   "cs_5_1",
-							   0,
-							   0,
-							   &computeBlob,
-							   &errorPtr));
+		TIF(D3DCompileFromFile(
+			_pPath, pDefines, nullptr, "main", "cs_5_1", 0, 0, &computeBlob, &errorPtr));
 
 		if(errorPtr)
 		{
@@ -818,14 +840,44 @@ namespace Impl
 		cpsd.CS.BytecodeLength				   = computeBlob->GetBufferSize();
 		cpsd.NodeMask						   = 0;
 
-		TIF(gDevice->CreateComputePipelineState(&cpsd, IID_PPV_ARGS(&gComputePipeline)));
-
-		NAME_D3D12_OBJECT(gComputePipeline);
+		TIF(gDevice->CreateComputePipelineState(&cpsd, IID_PPV_ARGS(_pPipelineState)));
+		(*_pPipelineState)->SetName(L"ComputePipelineState");
 	}
 
-	void RunCompute(void)
+	void CreatePipleineStates(void)
 	{
-		gComputeRecorder.Reset(gComputePipeline.Get());
+		D3D_SHADER_MACRO macro[2];
+		macro[1].Name		= nullptr;
+		macro[1].Definition = nullptr;
+
+		// Gaze Shaders
+		macro[0].Name		= "LINEAR";
+		macro[0].Definition = "1";
+
+		CreateComputeShader(L"../GPU_Codec/Shaders/ComputeGAZE.hlsl",
+							gComputeGazePipeline[GAZE_LINEAR].GetAddressOf(),
+							macro);
+
+		macro[0].Name		= "LOG";
+		macro[0].Definition = "1";
+		CreateComputeShader(L"../GPU_Codec/Shaders/ComputeGAZE.hlsl",
+							gComputeGazePipeline[GAZE_LOG].GetAddressOf(),
+							macro);
+
+		macro[0].Name		= "EXP";
+		macro[0].Definition = "1";
+		CreateComputeShader(L"../GPU_Codec/Shaders/ComputeGAZE.hlsl",
+							gComputeGazePipeline[GAZE_EXP].GetAddressOf(),
+							macro);
+
+		// RAW shader
+		CreateComputeShader(L"../GPU_Codec/Shaders/ComputeRAW.hlsl",
+							gComputeRAWPipeline.GetAddressOf());
+	}
+
+	void RunGazeCompute(void)
+	{
+		gComputeRecorder.Reset(gComputeGazePipeline[DX12Var::gCurrentGazeFunction].Get());
 		gComputeRecorder->SetComputeRootSignature(gComputeRoot.Get());
 
 		ID3D12DescriptorHeap* heaps[] = {gSRVUAVHeap.Get()};
@@ -871,6 +923,50 @@ namespace Impl
 		gComputeQueue.Flush();
 	}
 
+	void RunRAWCompute(void)
+	{
+		gComputeRecorder.Reset(gComputeRAWPipeline.Get());
+
+		gComputeRecorder->SetComputeRootSignature(gComputeRoot.Get());
+
+		ID3D12DescriptorHeap* heaps[] = {gSRVUAVHeap.Get()};
+		gComputeRecorder->SetDescriptorHeaps(1, heaps);
+
+		{
+			D3D12_RESOURCE_BARRIER barrier = {};
+			barrier.Type				   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+			barrier.Transition.pResource   = gOutputImage.Get();
+			barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+			barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE;
+			barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+
+			gComputeRecorder->ResourceBarrier(1, &barrier);
+		}
+
+		gComputeRecorder->SetComputeRootDescriptorTable(ROOT_UAV0,
+														DX12Var::GetGPUHeapHandleAt(UAV_TEXTURE0));
+
+		gComputeRecorder->SetComputeRootDescriptorTable(ROOT_SRV0,
+														DX12Var::GetGPUHeapHandleAt(SRV_TEXTURE0));
+
+		gComputeRecorder->Dispatch(Screen::width, Screen::height, 1);
+
+		{
+			D3D12_RESOURCE_BARRIER barrier = {};
+			barrier.Type				   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+			barrier.Transition.pResource   = gOutputImage.Get();
+			barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+			barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+			barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_COPY_SOURCE;
+			gComputeRecorder->ResourceBarrier(1, &barrier);
+		}
+
+		gComputeRecorder->Close();
+
+		gComputeQueue.Submit(gComputeRecorder.Get());
+		gComputeQueue.Flush();
+	}
+
 	void RunDirect()
 	{
 		gDirectQueue.WaitForAnotherQueue(&gComputeQueue);
@@ -888,7 +984,7 @@ namespace Impl
 		}
 
 		gDirectRecorder->CopyResource(gRTResource[gFrameIndex].Get(), gOutputImage.Get());
-		
+
 		{
 			D3D12_RESOURCE_BARRIER barrier = {};
 			barrier.Type				   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -913,10 +1009,13 @@ namespace Impl
 		// Render text directly to the backbuffer.
 		gD2DDeviceContext->SetTarget(gD2DRenderTarget[gFrameIndex].Get());
 		gD2DDeviceContext->BeginDraw();
-		gD2DDeviceContext->SetTransform(D2D1::Matrix3x2F::Translation(0, 0));
+		gD2DDeviceContext->SetTransform(D2D1::Matrix3x2F::Translation(-100, 0));
 		gD2DDeviceContext->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_DEFAULT);
+
+		const WCHAR* text = Debug::GetCurrentRadialFunctionWStr();
+
 		gD2DDeviceContext->DrawTextW(
-			L"LOL", ARRAYSIZE("LOL"), gDTextFormat.Get(), &textRect, gTextBrush.Get());
+			text, 3, gDTextFormat.Get(), &textRect, gTextBrush.Get());
 		gD2DDeviceContext->EndDraw();
 
 		// Release our wrapped render target resource. Releasing
@@ -940,6 +1039,7 @@ namespace DX12Wrap
 	{
 		GazePoint::lastX = GazePoint::lastY = 0;
 		GazePoint::currentX = GazePoint::currentY = 0;
+		DX12Var::gCurrentGazeFunction			  = 0;
 
 		Impl::CreateDevice();
 
@@ -990,8 +1090,9 @@ namespace DX12Wrap
 		ShowWindow(windowHandle, SW_MAXIMIZE);
 	}
 
-	void GazePoint(DirectX::XMINT2 _Coord)
+	void SetGazePoint(DirectX::XMINT2 _Coord)
 	{
+		// Clamp
 		if(_Coord.x < 0)
 			_Coord.x = 0;
 		else if(_Coord.x > Screen::width)
@@ -1008,12 +1109,18 @@ namespace DX12Wrap
 		//printf("Gaze Point: (%d,%d)\n", GazePoint::lastX, GazePoint::lastY);
 	}
 
-	void LoadTexture(const char* _pTexturePath)
+	void SetRadialFunction(UINT _Function)
+	{
+		//printf("Radial function %i\n", _Function);
+		DX12Var::gCurrentGazeFunction = _Function;
+	}
+
+	void UseTexture(const char* _pTexturePath)
 	{
 		int texWidth, texHeight, comp;
-		stbi_uc* texData;
-		//texData = stbi_load(_pTexturePath, &texWidth, &texHeight, &comp, 4);
-		texData = LoadPPM(_pTexturePath, &texWidth, &texHeight);
+		BYTE* texData;
+		texData = stbi_load(_pTexturePath, &texWidth, &texHeight, &comp, 4);
+		//texData = LoadPPM(_pTexturePath, &texWidth, &texHeight);
 		if(nullptr == texData)
 			return;
 
@@ -1025,9 +1132,9 @@ namespace DX12Wrap
 	void Render(void)
 	{
 		// Only run the compute if there is a new gaze point
-		if(GazePoint::NewPoint())
+		//if(GazePoint::NewPoint())
 		{
-			Impl::RunCompute();
+			Impl::RunGazeCompute();
 		}
 
 		Impl::RunDirect();

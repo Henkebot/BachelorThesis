@@ -3,6 +3,8 @@
 #pragma once
 #include "GPUPch.h"
 
+
+
 namespace DX12Wrap
 {
 
@@ -13,9 +15,11 @@ namespace DX12Wrap
 	void Fullscreen(HWND _WindowHandle);
 
 	// Load texture is loading and changing the display texture on the screen.
-	void LoadTexture(const char* _pTexturePath);
+	void UseTexture(const char* _pTexturePath);
 
-	void GazePoint(DirectX::XMINT2 _Coord);
+	void SetGazePoint(DirectX::XMINT2 _Coord);
+
+	void SetRadialFunction(UINT _Function);
 
 	void Render(void);
 
