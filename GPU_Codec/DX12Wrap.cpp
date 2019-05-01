@@ -74,8 +74,7 @@ namespace DX12Var
 	enum GAZE_PIPELINES : UINT
 	{
 		GAZE_LINEAR = 0,
-		GAZE_LOG,
-		GAZE_EXP,
+		GAZE_FOV,
 		NUM_OF_GAZE_FUNCTIONS
 	};
 	UINT gCurrentGazeFunction;
@@ -116,6 +115,9 @@ namespace GazePoint
 	int lastX, lastY;
 	int currentX, currentY;
 
+	float radiusPercentage;
+	float innerquality;
+
 	bool NewPoint()
 	{
 		if(lastX == currentX && lastY == currentY)
@@ -138,92 +140,90 @@ namespace Debug
 {
 	const WCHAR* GetCurrentRadialFunctionWStr()
 	{
-		switch (DX12Var::gCurrentGazeFunction)
+		switch(DX12Var::gCurrentGazeFunction)
 		{
 		case DX12Var::GAZE_LINEAR:
 			return L"LIN";
-		case DX12Var::GAZE_LOG:
-			return L"LOG";
-		case DX12Var::GAZE_EXP:
-			return L"EXP";
+		case DX12Var::GAZE_FOV:
+			return L"FOV";
 		}
 		return L"NUL";
 	}
 } // namespace Debug
 
-// Returns a image in 32 bit format
-BYTE* LoadPPM(const char* _pTexturePath, int* _pWidth, int* _pHeight)
-{
-	char buf[16];
-	FILE* pFile;
-	int width, height, colorComp;
-	BYTE* pData24Bit;
-	BYTE* pData32bit;
-
-	fopen_s(&pFile, _pTexturePath, "rb");
-	if(nullptr == pFile)
-		return nullptr;
-
-	if(false == fgets(buf, sizeof(buf), pFile))
-		return nullptr;
-
-	if(buf[0] != 'P' || buf[1] != '6')
-		return nullptr;
-
-	//check for comments
-	int c = getc(pFile);
-	while(c == '#')
-	{
-		while(getc(pFile) != '\n')
-			;
-		c = getc(pFile);
-	}
-
-	ungetc(c, pFile);
-
-	if(fscanf_s(pFile, "%d %d %d", &width, &height, &colorComp) != 3)
-		return nullptr;
-
-	if(colorComp != 255 && colorComp != ((256 * 256) - 1))
-		return nullptr;
-
-	colorComp = (colorComp > 255) ? 2 : 1;
-
-	getc(pFile);
-
-	pData24Bit = new BYTE[width * height * (3 * colorComp)];
-
-	pData32bit = new BYTE[width * height * (4 * colorComp)];
-
-	if(fread(reinterpret_cast<void*>(pData24Bit), 3 * width * height, 1, pFile) != 1)
-		return nullptr;
-
-	fclose(pFile);
-
-	// Convert to 32 bit
-	for(int i = 0; i < width * height; i++)
-	{
-		int index24 = i * 3;
-		int index32 = i * 4;
-
-		int j = 0;
-		for(; j < (3 * colorComp); j++)
-		{
-			pData32bit[index32 + j] = pData24Bit[index24 + j];
-		}
-
-		for(int k = 0; k < colorComp; k++)
-		{
-			pData32bit[index32 + j + k] = 255;
-		}
-	}
-
-	delete[] pData24Bit;
-
-	*_pWidth  = width;
-	*_pHeight = height;
-	return pData32bit;
-}
+//// Returns a image in 32 bit format
+//BYTE* LoadPPM(const char* _pTexturePath, int* _pWidth, int* _pHeight)
+//{
+//	char buf[16];
+//	FILE* pFile;
+//	int width, height, colorComp;
+//	BYTE* pData24Bit;
+//	BYTE* pData32bit;
+//
+//	fopen_s(&pFile, _pTexturePath, "rb");
+//	if(nullptr == pFile)
+//		return nullptr;
+//
+//	if(false == fgets(buf, sizeof(buf), pFile))
+//		return nullptr;
+//
+//	if(buf[0] != 'P' || buf[1] != '6')
+//		return nullptr;
+//
+//	//check for comments
+//	int c = getc(pFile);
+//	while(c == '#')
+//	{
+//		while(getc(pFile) != '\n')
+//			;
+//		c = getc(pFile);
+//	}
+//
+//	ungetc(c, pFile);
+//
+//	if(fscanf_s(pFile, "%d %d %d", &width, &height, &colorComp) != 3)
+//		return nullptr;
+//
+//	if(colorComp != 255 && colorComp != ((256 * 256) - 1))
+//		return nullptr;
+//
+//	colorComp = (colorComp > 255) ? 2 : 1;
+//
+//	getc(pFile);
+//
+//	pData24Bit = new BYTE[width * height * (3 * colorComp)];
+//
+//	pData32bit = new BYTE[width * height * (4 * colorComp)];
+//
+//	if(fread(reinterpret_cast<void*>(pData24Bit), 3 * width * height, 1, pFile) != 1)
+//		return nullptr;
+//
+//	fclose(pFile);
+//
+//	// Convert to 32 bit
+//	for(int i = 0; i < width * height; i++)
+//	{
+//		int index24 = i * 3;
+//		int index32 = i * 4;
+//
+//		int j = 0;
+//		for(; j < (3 * colorComp); j++)
+//		{
+//			pData32bit[index32 + j] = pData24Bit[index24 + j];
+//		}
+//
+//		for(int k = 0; k < colorComp; k++)
+//		{
+//			pData32bit[index32 + j + k] = 255;
+//		}
+//	}
+//
+//	delete[] pData24Bit;
+//
+//	*_pWidth  = width;
+//	*_pHeight = height;
+//	return pData32bit;
+//}
 
 namespace Impl
 {
@@ -779,7 +779,8 @@ namespace Impl
 
 			rootParameters[ROOT_CONSTANTS0].ParameterType =
 				D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-			rootParameters[ROOT_CONSTANTS0].Constants.Num32BitValues = 2; // two for gaze point
+			rootParameters[ROOT_CONSTANTS0].Constants.Num32BitValues =
+				4; // 2 for coord, 1 for circleradius, 1 for innerquality
 			rootParameters[ROOT_CONSTANTS0].Constants.RegisterSpace  = 0;
 			rootParameters[ROOT_CONSTANTS0].Constants.ShaderRegister = 0;
 			rootParameters[ROOT_CONSTANTS0].ShaderVisibility		 = D3D12_SHADER_VISIBILITY_ALL;
@@ -858,16 +859,10 @@ namespace Impl
 							gComputeGazePipeline[GAZE_LINEAR].GetAddressOf(),
 							macro);
 
-		macro[0].Name		= "LOG";
+		macro[0].Name		= "FOV";
 		macro[0].Definition = "1";
 		CreateComputeShader(L"../GPU_Codec/Shaders/ComputeGAZE.hlsl",
-							gComputeGazePipeline[GAZE_LOG].GetAddressOf(),
-							macro);
-
-		macro[0].Name		= "EXP";
-		macro[0].Definition = "1";
-		CreateComputeShader(L"../GPU_Codec/Shaders/ComputeGAZE.hlsl",
-							gComputeGazePipeline[GAZE_EXP].GetAddressOf(),
+							gComputeGazePipeline[GAZE_FOV].GetAddressOf(),
 							macro);
 
 		// RAW shader
@@ -900,10 +895,20 @@ namespace Impl
 		gComputeRecorder->SetComputeRootDescriptorTable(ROOT_SRV0,
 														DX12Var::GetGPUHeapHandleAt(SRV_TEXTURE0));
 
-		int data[2] = {GazePoint::currentX, GazePoint::currentY};
+		struct payload
+		{
+			int x, y;
+
+			float circleRadius, innerquality;
+
+		} data = {GazePoint::currentX,
+				  GazePoint::currentY,
+
+				  GazePoint::radiusPercentage,
+				  GazePoint::innerquality};
 
 		gComputeRecorder->SetComputeRoot32BitConstants(
-			ROOT_CONSTANTS0, ARRAYSIZE(data), reinterpret_cast<const void*>(&data), 0);
+			ROOT_CONSTANTS0, 4, reinterpret_cast<const void*>(&data), 0);
 
 		gComputeRecorder->Dispatch(Screen::width8, Screen::height8, 1);
 
@@ -991,10 +996,32 @@ namespace Impl
 			barrier.Transition.pResource   = gRTResource[gFrameIndex].Get();
 			barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 			barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-			barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_RENDER_TARGET;
+			barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_PRESENT;
 			gDirectRecorder->ResourceBarrier(1, &barrier);
 		}
 
+		gDirectRecorder->Close();
+
+		gDirectQueue.Submit(gDirectRecorder.Get());
+		gDirectQueue.Flush();
+
+		gDirectQueue.WaitForComplete();
+	}
+
+	void RunDirectText(const WCHAR _pText[])
+	{
+
+		gDirectRecorder.Reset();
+
+		{
+			D3D12_RESOURCE_BARRIER barrier = {};
+			barrier.Type				   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+			barrier.Transition.pResource   = gRTResource[gFrameIndex].Get();
+			barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+			barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
+			barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_RENDER_TARGET;
+			gDirectRecorder->ResourceBarrier(1, &barrier);
+		}
 		gDirectRecorder->Close();
 
 		gDirectQueue.Submit(gDirectRecorder.Get());
@@ -1009,13 +1036,12 @@ namespace Impl
 		// Render text directly to the backbuffer.
 		gD2DDeviceContext->SetTarget(gD2DRenderTarget[gFrameIndex].Get());
 		gD2DDeviceContext->BeginDraw();
-		gD2DDeviceContext->SetTransform(D2D1::Matrix3x2F::Translation(-100, 0));
-		gD2DDeviceContext->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_DEFAULT);
-
-		const WCHAR* text = Debug::GetCurrentRadialFunctionWStr();
+		gD2DDeviceContext->Clear();
+		gD2DDeviceContext->SetTransform(D2D1::Matrix3x2F::Translation(0, 0));
+		gD2DDeviceContext->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_ALIASED);
 
 		gD2DDeviceContext->DrawTextW(
-			text, 3, gDTextFormat.Get(), &textRect, gTextBrush.Get());
+			_pText, wcslen(_pText), gDTextFormat.Get(), &textRect, gTextBrush.Get());
 		gD2DDeviceContext->EndDraw();
 
 		// Release our wrapped render target resource. Releasing
@@ -1115,6 +1141,19 @@ namespace DX12Wrap
 		DX12Var::gCurrentGazeFunction = _Function;
 	}
 
+	void SetRadiusSetting(float _radiusPercentage, float _innerQualityPercentage)
+	{
+		GazePoint::innerquality		= _innerQualityPercentage;
+		GazePoint::radiusPercentage = _radiusPercentage;
+	}
+
+	void RenderText(const WCHAR _pText[])
+	{
+		Impl::RunDirectText(_pText);
+		gSwapChain->Present(1, 0);
+		gFrameIndex = gSwapChain->GetCurrentBackBufferIndex();
+	}
+
 	void UseTexture(const char* _pTexturePath)
 	{
 		int texWidth, texHeight, comp;
@@ -1129,13 +1168,24 @@ namespace DX12Wrap
 		delete[] texData;
 	}
 
-	void Render(void)
+	void RenderGaze(void)
 	{
 		// Only run the compute if there is a new gaze point
-		//if(GazePoint::NewPoint())
+		if(GazePoint::NewPoint())
 		{
 			Impl::RunGazeCompute();
 		}
+
+		Impl::RunDirect();
+
+		gSwapChain->Present(1, 0);
+		gFrameIndex = gSwapChain->GetCurrentBackBufferIndex();
+	}
+
+	void RenderRAW(void)
+	{
+		// Only run the compute if there is a new gaze point
+		Impl::RunRAWCompute();
 
 		Impl::RunDirect();
 

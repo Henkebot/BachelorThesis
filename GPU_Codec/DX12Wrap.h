@@ -21,7 +21,13 @@ namespace DX12Wrap
 
 	void SetRadialFunction(UINT _Function);
 
-	void Render(void);
+	void SetRadiusSetting(float _radiusPercentage, float _innerQualityPercentage);
+
+	void RenderText(const WCHAR _pText[]);
+
+	void RenderGaze(void);
+	
+	void RenderRAW(void);
 
 	void CleanUp(void);
 

@@ -178,6 +178,7 @@
     <ClInclude Include="Input\Input.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="ScopedTimer.h" />
+    <ClInclude Include="Timer.h" />
     <ClInclude Include="Window\VideoMode.h" />
     <ClInclude Include="Window\Window.h" />
   </ItemGroup>

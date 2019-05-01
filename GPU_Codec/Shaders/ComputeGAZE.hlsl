@@ -28,6 +28,8 @@ groupshared int UVQT[] = {17, 18, 24, 47, 99, 99, 99, 99, 18, 21, 26, 66, 99, 99
 cbuffer GazePoint : register(b0)
 {
 	uint2 gazePos;
+	float radius;
+	float innerquality;
 }
 
 float4 RGBtoYUV(float4 rgba)
@@ -66,31 +68,39 @@ uint LinearDistance(int2 Position)
 {
 	int d = distance(Position, gazePos);
 
-	float d3 = 2000.0f;
+	float d3 = 2000.0f * radius;
 
 	float quality = (1.0f - ((float(d / (d3)))));
 	return quality * 85.0f;
 }
 
-uint LogDistance(int2 Position)
+uint FovDistance(int2 Position)
 {
-	int d = distance(Position, gazePos);
+	uint quality, dist;
+	float screenDist = 2400.0f * radius;
+	float qualityFactor;
 
-	float quality;
-	quality = 1.0f - ((log(d) * 100.0f) / log(2400.0f));
+	dist = distance(Position, gazePos);
 
-	return quality * 85.0f;
-}
+	qualityFactor = (1.0f - (dist / screenDist));
 
-uint ExpDistance(int2 Position)
-{
-	int d = distance(Position, gazePos);
+	if(qualityFactor >= 0.9f && qualityFactor <= 1.0f)
+	{
+		quality = 85;
+	}
+	else if(qualityFactor >= 0.8f && qualityFactor < 0.9f)
+	{
+		float num = (0.9f - qualityFactor) / (0.9f - 0.8f);
 
-	float d3 = 2400.0f;
+		quality = lerp(85.0f, 20.0f, num);
+	}
+	else
+	{
 
-	float quality = (1.0f - ((float(d / (d3)))));
-	quality *= quality;
-	return quality * 85.0f;
+		quality = 20;
+	}
+
+	return quality;
 }
 
 uint CalculateQuality(uint2 Position)
@@ -100,33 +110,8 @@ uint CalculateQuality(uint2 Position)
 	quality = LinearDistance(Position);
 #endif
 
-	//#ifdef LOG
-	//	quality = LogDistance(Position);
-	//#endif
-
-#ifdef EXP
-	quality = ExpDistance(Position);
-#endif
-
-#ifdef LOG
-	int d = distance(Position, gazePos);
-
-	float d3 = 2400.0f;
-
-	float q = (1.0f - ((float(d / (d3)))));
-
-	if(q >= 0.9f && q <= 1.0f)
-		quality = 85;
-	else if(q >= 0.8f && q < 0.9f)
-	{
-		float num = (0.9f - q) / (0.9f - 0.8f);
-		quality   = lerp(85.0f, 20.0f, num);
-	}
-	else
-	{
-
-		quality = 20;
-	}
+#ifdef FOV
+	quality = FovDistance(Position);
 #endif
 
 	return quality;
@@ -142,12 +127,13 @@ uint CalculateQuality(uint2 Position)
 	coord <<= 3;
 
 	uint quality = CalculateQuality(coord);
+	quality = (float(quality) * innerquality);
 
-	float q = quality / 100.0f;
+	/*float q = quality / 100.0f;
 
 	Output[DispatchThreadID.xy] = float4(q, 0, 0, 1.0f);
 	return;
-
+*/
 	quality = quality < 1 ? 1 : quality > 100 ? 100 : quality;
 	quality = quality < 50 ? 5000 / quality : 200 - quality * 2;
 	int k;
@@ -156,7 +142,7 @@ uint CalculateQuality(uint2 Position)
 	yti				= (yti < 1 ? 1 : yti > 255 ? 255 : yti);
 	YQT[GroupIndex] = yti;
 
-	quality = 1;
+	quality			 = 1;
 	int uvti		 = (UVQT[GroupIndex] * quality + 50) / 100;
 	uvti			 = (uvti < 1 ? 1 : uvti > 255 ? 255 : uvti);
 	UVQT[GroupIndex] = uvti;

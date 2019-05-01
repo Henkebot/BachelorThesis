@@ -5,6 +5,7 @@
 
 #include <Sandbox/Input/Input.h>
 #include <Sandbox/ScopedTimer.h>
+#include <Sandbox/Timer.h>
 #include <Sandbox/Window/Window.h>
 
 const char* TestImages[] = {"../Resources/8bit/artificial.ppm",
@@ -21,10 +22,51 @@ const char* TestImages[] = {"../Resources/8bit/artificial.ppm",
 
 };
 
+enum class STAGE
+{
+	STAGE_INTRO,
+	STAGE_OUTRO,
+	STAGE_PRESENT,
+	STAGE_PREPARE,
+	STAGE_SELECTION
+} gCurrentStage;
+
+struct GAZE_Setting
+{
+	enum GAZE_FUNCTION
+	{
+		GAZE_FUNCTION_LIN = 0,
+		GAZE_FUNCTION_FOV
+	} radialFunction;
+
+	float circlePercentage;
+	float innerQualityPercentage;
+};
+
+enum DISPLAY_TYPE
+{
+	DISPLAY_TYPE_GAZE,
+	DISPLAY_TYPE_RAW
+};
+
+void SetupSettings(GAZE_Setting settings[10], int imageIndexes[10]);
+
+void LogResult(std::ofstream& file,
+			   int imageIndexes[10],
+			   int totalSimulationStep,
+			   DISPLAY_TYPE displayType[2],
+			   int choice,
+			   GAZE_Setting settings[10]);
+
 int main()
 {
 
-	int currentImage = 0;
+	// Settings table
+	GAZE_Setting settings[10];
+	int imageIndexes[10];
+	SetupSettings(settings, imageIndexes);
+
+	gCurrentStage = STAGE::STAGE_INTRO;
 
 	DX12Wrap::InitD3D();
 
@@ -38,7 +80,19 @@ int main()
 
 	DX12Wrap::Fullscreen(window.getHandle());
 
-	int counter = 0;
+	Timer t;
+
+	float time = 0;
+
+	DISPLAY_TYPE displayType[2];
+	displayType[0]			= DISPLAY_TYPE_GAZE;
+	displayType[1]			= DISPLAY_TYPE_RAW;
+	int totalSimulationStep = 0;
+	int simulationStep		= 0;
+
+	std::ofstream output;
+	output.open("Results.txt", std::ofstream::out | std::ofstream::app);
+	output << "Start of test------------------------------------------\n";
 
 	while(window.isOpen() && (false == Input::IsKeyTyped(VK_ESCAPE)))
 	{
@@ -46,45 +100,233 @@ int main()
 
 		window.pollEvents();
 
-		if(Input::IsKeyTyped(VK_UP))
+		DX12Wrap::SetGazePoint(Gaze::GetGazePoint());
+		DX12Wrap::SetRadialFunction(settings[totalSimulationStep].radialFunction);
+		DX12Wrap::SetRadiusSetting(settings[totalSimulationStep].circlePercentage,
+								   settings[totalSimulationStep].innerQualityPercentage);
+
+		// Simple StateMachine
+		switch(gCurrentStage)
 		{
-			counter++;
-			if(counter > 2)
-				counter = 2;
-		}
-		else if(Input::IsKeyTyped(VK_DOWN))
+		case STAGE::STAGE_INTRO:
 		{
-			counter--;
-			if(counter < 0)
-				counter = 0;
+			DX12Wrap::RenderText(L"PRESS ENTER LOL");
+			if(Input::IsKeyTyped(VK_RETURN))
+			{
+				gCurrentStage = STAGE::STAGE_PREPARE;
+				DX12Wrap::UseTexture(TestImages[imageIndexes[totalSimulationStep]]);
+				time = 0.0f;
+				t.RestartAndGetElapsedTimeMS();
+			}
 		}
-		DX12Wrap::SetRadialFunction(counter);
+		break;
 
-		if(Input::IsKeyTyped(VK_RIGHT))
+		case STAGE::STAGE_OUTRO:
 		{
-			currentImage++;
-			if(currentImage >= ARRAYSIZE(TestImages))
-				currentImage = ARRAYSIZE(TestImages) - 1;
-
-			DX12Wrap::UseTexture(TestImages[currentImage]);
+			DX12Wrap::RenderText(L"FUCK YOU");
+			if(Input::IsKeyTyped(VK_RETURN))
+				window.closeWindow();
 		}
-		else if(Input::IsKeyTyped(VK_LEFT))
+		break;
+
+		case STAGE::STAGE_PREPARE:
 		{
-			currentImage--;
-			if(currentImage < 0)
-				currentImage = 0;
+			time += t.RestartAndGetElapsedTimeMS();
+			if(time >= 5000.0f)
+			{
+				gCurrentStage = STAGE::STAGE_PRESENT;
 
-			DX12Wrap::UseTexture(TestImages[currentImage]);
+				time = 0.0f;
+				t.RestartAndGetElapsedTimeMS();
+				break;
+			}
+			WCHAR buffer[256];
+			wsprintfW(buffer, L"Image [%i] in %i", (simulationStep + 1), 5 - int(time / 1000));
+			DX12Wrap::RenderText(buffer);
 		}
+		break;
 
-		//DX12Wrap::SetGazePoint(Gaze::GetGazePoint());
-		DX12Wrap::SetGazePoint(Input::GetMousePosition());
+		case STAGE::STAGE_PRESENT:
+		{
+			time += t.RestartAndGetElapsedTimeMS();
+			if(time >= 5000.0f)
+			{
+				time = 0.0f;
+				t.RestartAndGetElapsedTimeMS();
+				simulationStep++;
+				gCurrentStage = STAGE::STAGE_PREPARE;
+			}
+			if(simulationStep == 2)
+			{
+				gCurrentStage  = STAGE::STAGE_SELECTION;
+				simulationStep = 0;
 
-		DX12Wrap::Render();
+				break;
+			}
+
+			switch(displayType[simulationStep])
+			{
+			case DISPLAY_TYPE_GAZE:
+			{
+				DX12Wrap::RenderGaze();
+			}
+			break;
+
+			case DISPLAY_TYPE_RAW:
+			{
+				DX12Wrap::RenderRAW();
+			}
+			break;
+			}
+		}
+		break;
+
+		case STAGE::STAGE_SELECTION:
+		{
+
+			WCHAR buffer[256];
+			wsprintfW(
+				buffer,
+				L"[%i/10]\n\nWhich image did you experience had the best quality?\nPress 1 for the "
+				L"first image OR Press 2 for the second image\n",
+				totalSimulationStep + 1);
+			DX12Wrap::RenderText(buffer);
+
+			int choice = -1;
+
+			if(Input::IsKeyTyped(VK_NUMPAD1) || Input::IsKeyTyped('1'))
+			{
+				choice = 0;
+			}
+			else if(Input::IsKeyTyped(VK_NUMPAD2) || Input::IsKeyTyped('2'))
+			{
+				choice = 1;
+			}
+
+			if(choice != -1)
+			{
+
+				// Now do we need to log the results
+				LogResult(output, imageIndexes, totalSimulationStep, displayType, choice, settings);
+
+				// Shuffle the display type for next round
+				if(rand() % 2 == 0)
+				{
+					std::swap(displayType[0], displayType[1]);
+				}
+
+				totalSimulationStep++;
+				if(totalSimulationStep == 10)
+				{
+					gCurrentStage = STAGE::STAGE_OUTRO;
+					break;
+				}
+				DX12Wrap::UseTexture(TestImages[imageIndexes[totalSimulationStep]]);
+				gCurrentStage = STAGE::STAGE_PREPARE;
+				time		  = 0.0f;
+				t.RestartAndGetElapsedTimeMS();
+			}
+		}
+		break;
+		}
 	}
+
+	output << "------------------------------------------End of test\n";
+
 	Gaze::CleanUp();
 	DX12Wrap::CleanUp();
 	return 0;
 
 	system("pause");
+}
+
+void LogResult(std::ofstream& file,
+			   int imageIndexes[10],
+			   int totalSimulationStep,
+			   DISPLAY_TYPE displayType[2],
+			   int choice,
+			   GAZE_Setting settings[10])
+{
+	file << "Image: " << TestImages[imageIndexes[totalSimulationStep]] << "\n"
+		 << "GAZE/RAW: " << ((displayType[choice] == DISPLAY_TYPE_GAZE) ? "GAZE" : "RAW") << "\n"
+		 << "Radial: "
+		 << ((settings[totalSimulationStep].radialFunction == GAZE_Setting::GAZE_FUNCTION_LIN)
+				 ? "Linear"
+				 : "Fov")
+		 << "\n"
+		 << "CircleRadius: " << settings[totalSimulationStep].circlePercentage << "\n"
+		 << "InnerQuality: " << settings[totalSimulationStep].innerQualityPercentage << "\n\n";
+}
+
+void SetupSettings(GAZE_Setting settings[10], int imageIndexes[10])
+{
+	settings[0].radialFunction		   = GAZE_Setting::GAZE_FUNCTION_LIN;
+	settings[0].circlePercentage	   = 1.0f;
+	settings[0].innerQualityPercentage = 1.0f;
+
+	settings[1].radialFunction		   = GAZE_Setting::GAZE_FUNCTION_LIN;
+	settings[1].circlePercentage	   = 0.8f;
+	settings[1].innerQualityPercentage = 1.0f;
+
+	settings[2].radialFunction		   = GAZE_Setting::GAZE_FUNCTION_LIN;
+	settings[2].circlePercentage	   = 0.6f;
+	settings[2].innerQualityPercentage = 1.0f;
+
+	settings[3].radialFunction		   = GAZE_Setting::GAZE_FUNCTION_LIN;
+	settings[3].circlePercentage	   = 1.0f;
+	settings[3].innerQualityPercentage = 0.8f;
+
+	settings[4].radialFunction		   = GAZE_Setting::GAZE_FUNCTION_LIN;
+	settings[4].circlePercentage	   = 1.0f;
+	settings[4].innerQualityPercentage = 0.6f;
+
+	settings[5].radialFunction		   = GAZE_Setting::GAZE_FUNCTION_FOV;
+	settings[5].circlePercentage	   = 1.0f;
+	settings[5].innerQualityPercentage = 1.0f;
+
+	settings[6].radialFunction		   = GAZE_Setting::GAZE_FUNCTION_FOV;
+	settings[6].circlePercentage	   = 0.8f;
+	settings[6].innerQualityPercentage = 1.0f;
+
+	settings[7].radialFunction		   = GAZE_Setting::GAZE_FUNCTION_FOV;
+	settings[7].circlePercentage	   = 0.6f;
+	settings[7].innerQualityPercentage = 1.0f;
+
+	settings[8].radialFunction		   = GAZE_Setting::GAZE_FUNCTION_FOV;
+	settings[8].circlePercentage	   = 1.0f;
+	settings[8].innerQualityPercentage = 0.8f;
+
+	settings[9].radialFunction		   = GAZE_Setting::GAZE_FUNCTION_FOV;
+	settings[9].circlePercentage	   = 1.0f;
+	settings[9].innerQualityPercentage = 0.6f;
+
+	for(int i = 0; i < 10; i++)
+	{
+		std::cout << "Radial: "
+				  << ((settings[i].radialFunction == GAZE_Setting::GAZE_FUNCTION_LIN) ? "Linear"
+																					  : "Fov")
+				  << "\n"
+				  << "CircleRadius: " << settings[i].circlePercentage << "\n"
+				  << "InnerQuality: " << settings[i].innerQualityPercentage << "\n";
+	}
+
+	std::cout << " \n\n\n";
+	// Shuffle the settings
+	std::random_shuffle(settings, settings + 9);
+
+	for(int i = 0; i < 10; i++)
+	{
+		std::cout << "Radial: "
+				  << ((settings[i].radialFunction == GAZE_Setting::GAZE_FUNCTION_LIN) ? "Linear"
+																					  : "Fov")
+				  << "\n"
+				  << "CircleRadius: " << settings[i].circlePercentage << "\n"
+				  << "InnerQuality: " << settings[i].innerQualityPercentage << "\n";
+	}
+
+	// Shuffle the image indexes
+	for(int i = 0; i < 10; i++)
+		imageIndexes[i] = i;
+
+	std::random_shuffle(imageIndexes, imageIndexes + 9);
 }
