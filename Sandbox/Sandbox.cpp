@@ -17,8 +17,7 @@ const char* TestImages[] = {"../Resources/8bit/artificial.ppm",
 							"../Resources/8bit/hdr.ppm",
 							"../Resources/8bit/leaves_iso_1600.ppm",
 							"../Resources/8bit/nightshot_iso_1600.ppm",
-							"../Resources/8bit/spider_web.ppm",
-							"../Resources/8bit/zone_plate.ppm"
+							"../Resources/8bit/spider_web.ppm"
 
 };
 
@@ -60,6 +59,7 @@ void LogResult(std::ofstream& file,
 
 int main()
 {
+	srand(static_cast<unsigned int>(time(0)));
 
 	// Settings table
 	GAZE_Setting settings[10];
@@ -76,8 +76,6 @@ int main()
 
 	Gaze::Init(window.GetWidth(), window.GetHeight());
 
-	DX12Wrap::UseTexture("../Resources/8bit/zone_plate.ppm");
-
 	DX12Wrap::Fullscreen(window.getHandle());
 
 	Timer t;
@@ -92,7 +90,9 @@ int main()
 
 	std::ofstream output;
 	output.open("Results.txt", std::ofstream::out | std::ofstream::app);
-	output << "Start of test------------------------------------------\n";
+	output << "Start of test------------------------------------------\n"
+		   << "Image\tRAW\tGAZE\tLinear\tFOV\tRadius 1\tRadius 0.8\tRadius 0.6\tQuality 1\tQuality "
+			  "0.8\tQuality 0.6\n";
 
 	while(window.isOpen() && (false == Input::IsKeyTyped(VK_ESCAPE)))
 	{
@@ -110,7 +110,7 @@ int main()
 		{
 		case STAGE::STAGE_INTRO:
 		{
-			DX12Wrap::RenderText(L"PRESS ENTER LOL");
+			DX12Wrap::RenderText(L"Press ENTER to start the study");
 			if(Input::IsKeyTyped(VK_RETURN))
 			{
 				gCurrentStage = STAGE::STAGE_PREPARE;
@@ -123,7 +123,7 @@ int main()
 
 		case STAGE::STAGE_OUTRO:
 		{
-			DX12Wrap::RenderText(L"FUCK YOU");
+			DX12Wrap::RenderText(L"Thanks for participating!\n\nPress ENTER to exit\n");
 			if(Input::IsKeyTyped(VK_RETURN))
 				window.closeWindow();
 		}
@@ -131,7 +131,7 @@ int main()
 
 		case STAGE::STAGE_PREPARE:
 		{
-			time += t.RestartAndGetElapsedTimeMS();
+			time += t.RestartAndGetElapsedTimeMS() * (Input::IsKeyPressed(VK_SHIFT) ? 10.0f : 1.0f);
 			if(time >= 5000.0f)
 			{
 				gCurrentStage = STAGE::STAGE_PRESENT;
@@ -148,7 +148,7 @@ int main()
 
 		case STAGE::STAGE_PRESENT:
 		{
-			time += t.RestartAndGetElapsedTimeMS();
+			time += t.RestartAndGetElapsedTimeMS() * (Input::IsKeyPressed(VK_SHIFT) ? 10.0f : 1.0f);
 			if(time >= 5000.0f)
 			{
 				time = 0.0f;
@@ -185,11 +185,10 @@ int main()
 		{
 
 			WCHAR buffer[256];
-			wsprintfW(
-				buffer,
-				L"[%i/10]\n\nWhich image did you experience had the best quality?\nPress 1 for the "
-				L"first image OR Press 2 for the second image\n",
-				totalSimulationStep + 1);
+			wsprintfW(buffer,
+					  L"[%i/10]\n\nWhich image had the best quality?\n\nPress 1 for the "
+					  L"first image\nOR\nPress 2 for the second image\n",
+					  totalSimulationStep + 1);
 			DX12Wrap::RenderText(buffer);
 
 			int choice = -1;
@@ -247,15 +246,38 @@ void LogResult(std::ofstream& file,
 			   int choice,
 			   GAZE_Setting settings[10])
 {
-	file << "Image: " << TestImages[imageIndexes[totalSimulationStep]] << "\n"
-		 << "GAZE/RAW: " << ((displayType[choice] == DISPLAY_TYPE_GAZE) ? "GAZE" : "RAW") << "\n"
+	file << TestImages[imageIndexes[totalSimulationStep]] << "\t"
+		 << bool(displayType[choice] == DISPLAY_TYPE_RAW) << "\t"
+		 << bool(displayType[choice] == DISPLAY_TYPE_GAZE) << "\t";
+	if(displayType[choice] == DISPLAY_TYPE_GAZE)
+	{
+		file << bool(settings[totalSimulationStep].radialFunction ==
+					 GAZE_Setting::GAZE_FUNCTION_LIN)
+			 << "\t"
+			 << bool(settings[totalSimulationStep].radialFunction ==
+					 GAZE_Setting::GAZE_FUNCTION_FOV)
+			 << "\t" << bool(settings[totalSimulationStep].circlePercentage == 1.0f) << "\t"
+			 << bool(settings[totalSimulationStep].circlePercentage == 0.8f) << "\t"
+			 << bool(settings[totalSimulationStep].circlePercentage == 0.6f) << "\t"
+			 << bool(settings[totalSimulationStep].innerQualityPercentage == 1.0f) << "\t"
+			 << bool(settings[totalSimulationStep].innerQualityPercentage == 0.8f) << "\t"
+			 << bool(settings[totalSimulationStep].innerQualityPercentage == 0.6f);
+	}
+	else
+	{
+		file << "0\t0\t0\t0\t0\t0\t0\t0";
+	}
+	file << "\n";
+
+	/*file << "Image: " << << "\n"
+		 << "GAZE/RAW: " << << "\n"
 		 << "Radial: "
 		 << ((settings[totalSimulationStep].radialFunction == GAZE_Setting::GAZE_FUNCTION_LIN)
 				 ? "Linear"
 				 : "Fov")
 		 << "\n"
 		 << "CircleRadius: " << settings[totalSimulationStep].circlePercentage << "\n"
-		 << "InnerQuality: " << settings[totalSimulationStep].innerQualityPercentage << "\n\n";
+		 << "InnerQuality: " << settings[totalSimulationStep].innerQualityPercentage << "\n\n";*/
 }
 
 void SetupSettings(GAZE_Setting settings[10], int imageIndexes[10])
@@ -301,32 +323,12 @@ void SetupSettings(GAZE_Setting settings[10], int imageIndexes[10])
 	settings[9].innerQualityPercentage = 0.6f;
 
 	for(int i = 0; i < 10; i++)
-	{
-		std::cout << "Radial: "
-				  << ((settings[i].radialFunction == GAZE_Setting::GAZE_FUNCTION_LIN) ? "Linear"
-																					  : "Fov")
-				  << "\n"
-				  << "CircleRadius: " << settings[i].circlePercentage << "\n"
-				  << "InnerQuality: " << settings[i].innerQualityPercentage << "\n";
-	}
+		imageIndexes[i] = i;
 
-	std::cout << " \n\n\n";
 	// Shuffle the settings
 	std::random_shuffle(settings, settings + 9);
 
-	for(int i = 0; i < 10; i++)
-	{
-		std::cout << "Radial: "
-				  << ((settings[i].radialFunction == GAZE_Setting::GAZE_FUNCTION_LIN) ? "Linear"
-																					  : "Fov")
-				  << "\n"
-				  << "CircleRadius: " << settings[i].circlePercentage << "\n"
-				  << "InnerQuality: " << settings[i].innerQualityPercentage << "\n";
-	}
-
 	// Shuffle the image indexes
-	for(int i = 0; i < 10; i++)
-		imageIndexes[i] = i;
 
 	std::random_shuffle(imageIndexes, imageIndexes + 9);
 }

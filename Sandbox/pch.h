@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <fstream>
+#include <time.h>
 
 #include <GPU_Codec/DX12Wrap.h>
 #include <GazeEngine/GazeEngine.h>
