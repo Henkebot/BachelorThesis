@@ -18,6 +18,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Sandbox", "Sandbox\Sandbox.
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GazeEngine", "GazeEngine\GazeEngine.vcxproj", "{6500C6EA-FEC6-4482-B72F-C61CEF18AE43}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ResultsMerger", "ResultsMerger\ResultsMerger.vcxproj", "{FDC6C6C9-6318-453B-8BF4-8FE72DBDC337}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -66,6 +68,14 @@ Global
 		{6500C6EA-FEC6-4482-B72F-C61CEF18AE43}.Release|x64.Build.0 = Release|x64
 		{6500C6EA-FEC6-4482-B72F-C61CEF18AE43}.Release|x86.ActiveCfg = Release|Win32
 		{6500C6EA-FEC6-4482-B72F-C61CEF18AE43}.Release|x86.Build.0 = Release|Win32
+		{FDC6C6C9-6318-453B-8BF4-8FE72DBDC337}.Debug|x64.ActiveCfg = Debug|x64
+		{FDC6C6C9-6318-453B-8BF4-8FE72DBDC337}.Debug|x64.Build.0 = Debug|x64
+		{FDC6C6C9-6318-453B-8BF4-8FE72DBDC337}.Debug|x86.ActiveCfg = Debug|Win32
+		{FDC6C6C9-6318-453B-8BF4-8FE72DBDC337}.Debug|x86.Build.0 = Debug|Win32
+		{FDC6C6C9-6318-453B-8BF4-8FE72DBDC337}.Release|x64.ActiveCfg = Release|x64
+		{FDC6C6C9-6318-453B-8BF4-8FE72DBDC337}.Release|x64.Build.0 = Release|x64
+		{FDC6C6C9-6318-453B-8BF4-8FE72DBDC337}.Release|x86.ActiveCfg = Release|Win32
+		{FDC6C6C9-6318-453B-8BF4-8FE72DBDC337}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

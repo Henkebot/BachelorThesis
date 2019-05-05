@@ -1,0 +1,125 @@
+Start of test------------------------------------------
+Image: ../Resources/8bit/leaves_iso_1600.ppm
+GAZE/RAW: RAW
+Radial: Fov
+CircleRadius: 0.6
+InnerQuality: 1
+
+Image: ../Resources/8bit/nightshot_iso_1600.ppm
+GAZE/RAW: GAZE
+Radial: Linear
+CircleRadius: 1
+InnerQuality: 0.8
+
+Image: ../Resources/8bit/fireworks.ppm
+GAZE/RAW: GAZE
+Radial: Linear
+CircleRadius: 0.8
+InnerQuality: 1
+
+Image: ../Resources/8bit/deer.ppm
+GAZE/RAW: GAZE
+Radial: Fov
+CircleRadius: 1
+InnerQuality: 1
+
+Image: ../Resources/8bit/hdr.ppm
+GAZE/RAW: GAZE
+Radial: Linear
+CircleRadius: 1
+InnerQuality: 0.6
+
+Image: ../Resources/8bit/big_building.ppm
+GAZE/RAW: GAZE
+Radial: Fov
+CircleRadius: 1
+InnerQuality: 0.8
+
+Image: ../Resources/8bit/flower_foveon.ppm
+GAZE/RAW: RAW
+Radial: Fov
+CircleRadius: 0.8
+InnerQuality: 1
+
+Image: ../Resources/8bit/artificial.ppm
+GAZE/RAW: RAW
+Radial: Linear
+CircleRadius: 1
+InnerQuality: 1
+
+Image: ../Resources/8bit/big_tree.ppm
+GAZE/RAW: RAW
+Radial: Linear
+CircleRadius: 0.6
+InnerQuality: 1
+
+Image: ../Resources/8bit/spider_web.ppm
+GAZE/RAW: GAZE
+Radial: Fov
+CircleRadius: 1
+InnerQuality: 0.6
+
+------------------------------------------End of test
+Start of test------------------------------------------
+Image: ../Resources/8bit/leaves_iso_1600.ppm
+GAZE/RAW: GAZE
+Radial: Fov
+CircleRadius: 0.6
+InnerQuality: 1
+
+Image: ../Resources/8bit/nightshot_iso_1600.ppm
+GAZE/RAW: GAZE
+Radial: Fov
+CircleRadius: 0.8
+InnerQuality: 1
+
+Image: ../Resources/8bit/artificial.ppm
+GAZE/RAW: RAW
+Radial: Fov
+CircleRadius: 1
+InnerQuality: 1
+
+Image: ../Resources/8bit/deer.ppm
+GAZE/RAW: RAW
+Radial: Linear
+CircleRadius: 1
+InnerQuality: 0.8
+
+Image: ../Resources/8bit/fireworks.ppm
+GAZE/RAW: GAZE
+Radial: Linear
+CircleRadius: 1
+InnerQuality: 0.6
+
+Image: ../Resources/8bit/hdr.ppm
+GAZE/RAW: GAZE
+Radial: Linear
+CircleRadius: 1
+InnerQuality: 1
+
+Image: ../Resources/8bit/big_tree.ppm
+GAZE/RAW: RAW
+Radial: Fov
+CircleRadius: 1
+InnerQuality: 0.8
+
+Image: ../Resources/8bit/flower_foveon.ppm
+GAZE/RAW: RAW
+Radial: Linear
+CircleRadius: 0.6
+InnerQuality: 1
+
+Image: ../Resources/8bit/big_building.ppm
+GAZE/RAW: RAW
+Radial: Linear
+CircleRadius: 0.8
+InnerQuality: 1
+
+Image: ../Resources/8bit/spider_web.ppm
+GAZE/RAW: RAW
+Radial: Fov
+CircleRadius: 1
+InnerQuality: 0.6
+
+------------------------------------------End of test
+

@@ -220,7 +220,9 @@ int main()
 					gCurrentStage = STAGE::STAGE_OUTRO;
 					break;
 				}
+				DX12Wrap::RenderText(L"Loading next image");
 				DX12Wrap::UseTexture(TestImages[imageIndexes[totalSimulationStep]]);
+
 				gCurrentStage = STAGE::STAGE_PREPARE;
 				time		  = 0.0f;
 				t.RestartAndGetElapsedTimeMS();
@@ -246,38 +248,21 @@ void LogResult(std::ofstream& file,
 			   int choice,
 			   GAZE_Setting settings[10])
 {
-	file << TestImages[imageIndexes[totalSimulationStep]] << "\t"
+	file << (TestImages[imageIndexes[totalSimulationStep]] + 18) << "\t"
 		 << bool(displayType[choice] == DISPLAY_TYPE_RAW) << "\t"
 		 << bool(displayType[choice] == DISPLAY_TYPE_GAZE) << "\t";
-	if(displayType[choice] == DISPLAY_TYPE_GAZE)
-	{
-		file << bool(settings[totalSimulationStep].radialFunction ==
-					 GAZE_Setting::GAZE_FUNCTION_LIN)
-			 << "\t"
-			 << bool(settings[totalSimulationStep].radialFunction ==
-					 GAZE_Setting::GAZE_FUNCTION_FOV)
-			 << "\t" << bool(settings[totalSimulationStep].circlePercentage == 1.0f) << "\t"
-			 << bool(settings[totalSimulationStep].circlePercentage == 0.8f) << "\t"
-			 << bool(settings[totalSimulationStep].circlePercentage == 0.6f) << "\t"
-			 << bool(settings[totalSimulationStep].innerQualityPercentage == 1.0f) << "\t"
-			 << bool(settings[totalSimulationStep].innerQualityPercentage == 0.8f) << "\t"
-			 << bool(settings[totalSimulationStep].innerQualityPercentage == 0.6f);
-	}
-	else
-	{
-		file << "0\t0\t0\t0\t0\t0\t0\t0";
-	}
-	file << "\n";
 
-	/*file << "Image: " << << "\n"
-		 << "GAZE/RAW: " << << "\n"
-		 << "Radial: "
-		 << ((settings[totalSimulationStep].radialFunction == GAZE_Setting::GAZE_FUNCTION_LIN)
-				 ? "Linear"
-				 : "Fov")
-		 << "\n"
-		 << "CircleRadius: " << settings[totalSimulationStep].circlePercentage << "\n"
-		 << "InnerQuality: " << settings[totalSimulationStep].innerQualityPercentage << "\n\n";*/
+	file << bool(settings[totalSimulationStep].radialFunction == GAZE_Setting::GAZE_FUNCTION_LIN)
+		 << "\t"
+		 << bool(settings[totalSimulationStep].radialFunction == GAZE_Setting::GAZE_FUNCTION_FOV)
+		 << "\t" << bool(settings[totalSimulationStep].circlePercentage == 1.0f) << "\t"
+		 << bool(settings[totalSimulationStep].circlePercentage == 0.8f) << "\t"
+		 << bool(settings[totalSimulationStep].circlePercentage == 0.6f) << "\t"
+		 << bool(settings[totalSimulationStep].innerQualityPercentage == 1.0f) << "\t"
+		 << bool(settings[totalSimulationStep].innerQualityPercentage == 0.8f) << "\t"
+		 << bool(settings[totalSimulationStep].innerQualityPercentage == 0.6f);
+
+	file << "\n";
 }
 
 void SetupSettings(GAZE_Setting settings[10], int imageIndexes[10])
