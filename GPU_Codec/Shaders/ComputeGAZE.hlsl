@@ -142,7 +142,7 @@ uint CalculateQuality(uint2 Position)
 	yti				= (yti < 1 ? 1 : yti > 255 ? 255 : yti);
 	YQT[GroupIndex] = yti;
 
-	quality			 = 1;
+
 	int uvti		 = (UVQT[GroupIndex] * quality + 50) / 100;
 	uvti			 = (uvti < 1 ? 1 : uvti > 255 ? 255 : uvti);
 	UVQT[GroupIndex] = uvti;
