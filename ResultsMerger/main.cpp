@@ -66,7 +66,7 @@ int main(int argc, char** argv)
 		// Find the item with the same name
 		for(int j = 0; j < 10; j++)
 		{
-			Item& newItem = newItems[i];
+			Item& newItem = newItems[j];
 			if(strcmp(oldItem.name, newItem.name) == 0)
 			{
 				oldItem.raw += newItem.raw;

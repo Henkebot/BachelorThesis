@@ -1,11 +1,11 @@
 Image	RAW	GAZE	Linear	FOV	Radius 1	Radius 0.8	Radius 0.6	Quality 1	Quality 0.8	Quality 0.6
-fireworks.ppm	4	0	0	0	0	0	0	0	0	0
-deer.ppm	0	5	0	5	0	5	0	5	0	0
-artificial.ppm	4	0	0	0	0	0	0	0	0	0
-flower_foveon.ppm	4	0	0	0	0	0	0	0	0	0
-big_tree.ppm	4	1	1	0	1	0	0	0	1	0
-hdr.ppm	0	4	0	4	0	0	4	4	0	0
-big_building.ppm	4	0	0	0	0	0	0	0	0	0
-leaves_iso_1600.ppm	4	0	0	0	0	0	0	0	0	0
-nightshot_iso_1600.ppm	4	0	0	0	0	0	0	0	0	0
-spider_web.ppm	1	4	0	4	4	0	0	0	0	4
+flower_foveon.ppm	6	4	8	2	3	4	3	8	2	0
+hdr.ppm	7	3	6	4	7	0	3	3	6	1
+deer.ppm	5	5	2	8	8	1	1	6	3	1
+artificial.ppm	6	4	7	3	5	0	5	9	1	0
+nightshot_iso_1600.ppm	7	3	7	3	7	1	2	5	1	4
+leaves_iso_1600.ppm	7	3	7	3	6	4	0	7	3	0
+fireworks.ppm	7	3	3	7	6	4	0	8	0	2
+big_tree.ppm	6	4	7	3	3	4	3	7	1	2
+big_building.ppm	9	1	3	7	5	2	3	7	3	0
+spider_web.ppm	9	1	0	10	10	0	0	0	0	10

@@ -9,7 +9,7 @@
 #define STBI_MSC_SECURE_CRT
 #include "Utility/stb_image_write.h"
 
-const char* TestImages[] = {"../Resources/8bit/artificial.png",
+const char* TestImages[]	 = {"../Resources/8bit/artificial.png",
 							"../Resources/8bit/big_building.png",
 							"../Resources/8bit/big_tree.png",
 							"../Resources/8bit/deer.png",
@@ -19,6 +19,16 @@ const char* TestImages[] = {"../Resources/8bit/artificial.png",
 							"../Resources/8bit/leaves_iso_1600.png",
 							"../Resources/8bit/nightshot_iso_1600.png",
 							"../Resources/8bit/spider_web.png"};
+const char* TestImagesJPEG[] = {"../Resources/8bit/artificial.jpg",
+								"../Resources/8bit/big_building.jpg",
+								"../Resources/8bit/big_tree.jpg",
+								"../Resources/8bit/deer.jpg",
+								"../Resources/8bit/fireworks.jpg",
+								"../Resources/8bit/flower_foveon.jpg",
+								"../Resources/8bit/hdr.jpg",
+								"../Resources/8bit/leaves_iso_1600.jpg",
+								"../Resources/8bit/nightshot_iso_1600.jpg",
+								"../Resources/8bit/spider_web.jpg"};
 
 // Compression
 long long totalBitsRequired = 0;
@@ -71,8 +81,13 @@ int main()
 	SetupTables();
 
 	int width, height, comp;
-	stbi_uc* imageData = stbi_load(TestImages[0], &width, &height, &comp, 3);
-
+	stbi_uc* imageData = nullptr;
+	for(int i = 0; i < ARRAYSIZE(TestImages); i++)
+	{
+		imageData = stbi_load(TestImages[i], &width, &height, &comp, 3);
+		stbi_write_jpg(TestImagesJPEG[i], width, height, comp, imageData, 85);
+	}
+	return 0;
 	GAZE_Setting settings[10];
 
 	settings[0].innerQuality = 1.0f;
@@ -135,6 +150,7 @@ int main()
 		}
 		long long result = CalculateSize(height, width, imageData, comp, nullptr);
 		output << result << "\n";
+		delete[] imageData;
 	}
 	output.close();
 	system("pause");
@@ -148,7 +164,7 @@ long long CalculateSize(int height, int width, stbi_uc* imageData, int comp, GAZ
 	int bitBuf = 0, bitCnt = 0;
 	int middleX = width >> 1;
 	int middleY = height >> 1;
-	
+
 	for(unsigned int y = 0; y < height; y += 8)
 	{
 		for(unsigned int x = 0; x < width; x += 8)

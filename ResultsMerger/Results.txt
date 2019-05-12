@@ -1,13 +1,13 @@
 Start of test------------------------------------------
 Image	RAW	GAZE	Linear	FOV	Radius 1	Radius 0.8	Radius 0.6	Quality 1	Quality 0.8	Quality 0.6
-flower_foveon.ppm	1	0	0	0	0	0	0	0	0	0
-deer.ppm	0	1	0	1	0	1	0	1	0	0
-fireworks.ppm	0	1	0	1	1	0	0	1	0	0
-hdr.ppm	1	0	0	0	0	0	0	0	0	0
-big_tree.ppm	0	1	1	0	1	0	0	0	1	0
-artificial.ppm	1	0	0	0	0	0	0	0	0	0
-nightshot_iso_1600.ppm	1	0	0	0	0	0	0	0	0	0
-big_building.ppm	0	1	1	0	0	0	1	1	0	0
-leaves_iso_1600.ppm	1	0	0	0	0	0	0	0	0	0
-spider_web.ppm	1	0	0	0	0	0	0	0	0	0
+nightshot_iso_1600.ppm	1	0	0	1	0	0	1	1	0	0
+fireworks.ppm	0	1	1	0	0	1	0	1	0	0
+big_building.ppm	1	0	1	0	1	0	0	0	1	0
+artificial.ppm	0	1	1	0	1	0	0	1	0	0
+leaves_iso_1600.ppm	1	0	0	1	0	1	0	1	0	0
+hdr.ppm	0	1	0	1	1	0	0	0	1	0
+deer.ppm	1	0	0	1	1	0	0	1	0	0
+flower_foveon.ppm	1	0	1	0	0	0	1	1	0	0
+big_tree.ppm	0	1	1	0	1	0	0	0	0	1
+spider_web.ppm	0	1	0	1	1	0	0	0	0	1
 ------------------------------------------End of test
